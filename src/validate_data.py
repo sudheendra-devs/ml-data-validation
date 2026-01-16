@@ -36,6 +36,7 @@ def detect_outliers(series):
     return int(((series < lower) | (series > upper)).sum())
 
 def run_validation(input_path, output_dir):
+    output_dir.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(input_path)
 
     report = {}
