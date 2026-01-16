@@ -2,7 +2,10 @@ import json
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import shutil
+import gradio as gr
 
+# ----------------- Validation Logic -----------------
 def to_python(obj):
     if isinstance(obj, dict):
         return {k: to_python(v) for k, v in obj.items()}
@@ -36,11 +39,11 @@ def detect_outliers(series):
     return int(((series < lower) | (series > upper)).sum())
 
 def run_validation(input_path, output_dir):
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(input_path)
 
     report = {}
-
     report["missing_values"] = df.isnull().sum().to_dict()
     report["duplicate_rows"] = int(df.duplicated().sum())
     df = df.drop_duplicates()
@@ -65,35 +68,27 @@ def run_validation(input_path, output_dir):
 
     report["categorical_cardinality"] = category_info
 
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     cleaned_path = output_dir / f"cleaned_{Path(input_path).name}"
     report_path = output_dir / f"validation_report_{Path(input_path).stem}.json"
 
     df.to_csv(cleaned_path, index=False)
-
     with open(report_path, "w") as f:
         json.dump(to_python(report), f, indent=4)
 
-    return {
-        "status": "success",
-        "cleaned_data": str(cleaned_path),
-        "report": str(report_path)
-    }
-def validate_file(file_path):
-    import shutil
-    # Copy the uploaded file to your working folder
-    cleaned_path = "data/processed/cleaned_" + file_path.split("/")[-1]
-    shutil.copy(file_path, cleaned_path)
+    return str(cleaned_path), str(report_path)
 
-    # Now call your validate_data function on this file
-    from src.validate_data import run_validation
-    report_path = run_validation(file_path, "data/processed")
+# ----------------- Gradio Frontend -----------------
+def validate_file(file):
+    # file is a path string
+    return run_validation(file.name, "data/processed")
 
-    return cleaned_path, report_path
-
+iface = gr.Interface(
+    fn=validate_file,
+    inputs=gr.File(file_types=[".csv"]),
+    outputs=[gr.File(label="Cleaned CSV"), gr.File(label="Validation Report")],
+    title="ML Data Validation",
+    description="Upload your CSV file and get cleaned data + validation report"
+)
 
 if __name__ == "__main__":
-    import sys
-    run_validation(sys.argv[1], sys.argv[2])
+    iface.launch(share=True)
