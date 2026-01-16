@@ -81,6 +81,18 @@ def run_validation(input_path, output_dir):
         "cleaned_data": str(cleaned_path),
         "report": str(report_path)
     }
+def validate_file(file_path):
+    import shutil
+    # Copy the uploaded file to your working folder
+    cleaned_path = "data/processed/cleaned_" + file_path.split("/")[-1]
+    shutil.copy(file_path, cleaned_path)
+
+    # Now call your validate_data function on this file
+    from src.validate_data import run_validation
+    report_path = run_validation(file_path, "data/processed")
+
+    return cleaned_path, report_path
+
 
 if __name__ == "__main__":
     import sys
