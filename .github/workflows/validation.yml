@@ -21,9 +21,12 @@ jobs:
         run: |
           pip install pandas numpy
 
-      - name: Run validation
+      - name: Run data validation
         run: |
-          python src/validate_data.py data/raw/sample.csv data/processed
+          for file in data/raw/*.csv; do
+            python src/validate_data.py "$file" data/processed
+          done
+
 
       - name: Upload validation artifacts
         uses: actions/upload-artifact@v4
